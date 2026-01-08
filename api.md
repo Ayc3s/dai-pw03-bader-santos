@@ -86,6 +86,63 @@ The response body contains a JSON object with the following properties:
 - `400` (Bad Request) – The request body is invalid
 - `404` (Not Found) – The client does not exist
 - `409` (Conflict) – The email already exists
+
+
+### Get many clients
+
+- `GET /clients`
+
+Get many clients. You can optionally filter by `firstName` and/or `lastName` (exact match, case-insensitive).
+
+#### Request
+
+Optional query parameters:
+
+- `firstName` – Filter clients by first name
+- `lastName` – Filter clients by last name
+
+#### Response
+
+The response body contains a JSON array of clients with the following properties:
+
+- `id` – The unique identifier of the client
+- `firstName` – The first name of the client
+- `lastName` – The last name of the client
+- `email` – The email address of the client
+- `phone` – The phone number of the client
+
+#### Status codes
+
+- `200` (OK) – The clients have been successfully retrieved
+
+---
+
+### Get one client
+
+- `GET /clients/{id}`
+
+Get one client by its ID.
+
+#### Request
+
+The request path must contain the ID of the client.
+
+#### Response
+
+The response body contains a JSON object with the following properties:
+
+- `id` – The unique identifier of the client
+- `firstName` – The first name of the client
+- `lastName` – The last name of the client
+- `email` – The email address of the client
+- `phone` – The phone number of the client
+
+#### Status codes
+
+- `200` (OK) – The client has been successfully retrieved
+- `404` (Not Found) – The client does not exist
+
+
 ### Delete a client
 
 - `DELETE /clients/{id}`
@@ -195,6 +252,9 @@ The response body contains a JSON array with the following properties:
 - `name`
 - `location`
 - `type`
+- `maintenanceDone`
+- `minTemperature`
+- `maxTemperature`
 - `isActive`
 
 #### Status codes
@@ -213,7 +273,7 @@ The request path must contain the ID of the bath.
 
 #### Response
 
-The response body contains a JSON object describing the bath.
+The response body contains a JSON object describing the bath like `Get many baths`
 
 #### Status codes
 
@@ -229,7 +289,7 @@ Update a bath by its ID.
 
 The request path must contain the ID of the bath.
 
-The request body must contain one or more of the following properties:
+The request body must contain all of the following properties:
 
 - `name`
 - `location`
@@ -281,7 +341,7 @@ The request path must contain the ID of the bath.
 The request body must contain a JSON object with the following properties:
 
 - `temperature` – The measured temperature
-- `measuredAt` – The measurement timestamp (ISO 8601)
+- `measuredAt` – The measurement timestamp
 #### Response
 
 The response body contains a JSON object with the following properties:
