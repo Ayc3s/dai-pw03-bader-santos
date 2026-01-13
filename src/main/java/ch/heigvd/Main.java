@@ -7,8 +7,6 @@ import ch.heigvd.clients.Client;
 import ch.heigvd.clients.ClientsController;
 import ch.heigvd.clients.Visit;
 import io.javalin.Javalin;
-import io.javalin.http.HttpStatus;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -51,13 +49,6 @@ public class Main {
     app.put("/baths/{id}", bathsController::update);
     app.delete("/baths/{id}", bathsController::delete);
     app.post("/baths/{id}/measurements", bathsController::recordMeasurement);
-
-    app.get(
-        "/health",
-        ctx -> {
-          ctx.status(HttpStatus.OK);
-          ctx.json(Map.of("status", "ok"));
-        });
 
     app.start(PORT);
   }
