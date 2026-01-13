@@ -26,7 +26,7 @@ We worked with Dynu to get our free DNS domain.
 1) Go to : https://www.dynu.com/en-US/
 2) Create your account and register your new domain. Match your ip with your domain name.
 3) Our exemple : dai-pw03-bader-santos.ddnsfree.com 
-4) Manage your DSN Record, if not added, check if there is a record type for A and AAAA
+4) Manage your DSN Record, if not added, check if there is a record type for A or AAAA
 
 ![img.png](img/dns_record.png)
 
@@ -172,7 +172,7 @@ Tous les bains :
 https://dai-pw03-bader-santos.ddnsfree.com/baths
 
 Un bain par id :
-https://dai-pw03-bader-santos.ddnsfree.com/baths/1 (remplace 1)
+https://dai-pw03-bader-santos.ddnsfree.com/baths/1
 
 ##### Clients
 
@@ -180,7 +180,7 @@ Tous les clients :
 https://dai-pw03-bader-santos.ddnsfree.com/clients
 
 Un client par id :
-https://dai-pw03-bader-santos.ddnsfree.com/clients/1 (remplace 1)
+https://dai-pw03-bader-santos.ddnsfree.com/clients/1
 
 Recherche clients :
 
