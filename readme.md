@@ -158,7 +158,7 @@ curl -X PUT \
 "$BASE/clients/1"
 ```
 
-Supprimer un bain :
+Delete a bath :
 ```
 curl -X DELETE \
 "$BASE/baths/1"
@@ -166,30 +166,30 @@ curl -X DELETE \
 
 ### Url access
 
-##### Bains
+##### Baths
 
-Tous les bains :
+All baths :
 https://dai-pw03-bader-santos.ddnsfree.com/baths
 
-Un bain par id :
+bath by id :
 https://dai-pw03-bader-santos.ddnsfree.com/baths/1
 
 ##### Clients
 
-Tous les clients :
+All clients :
 https://dai-pw03-bader-santos.ddnsfree.com/clients
 
-Un client par id :
+Client by id :
 https://dai-pw03-bader-santos.ddnsfree.com/clients/1
 
-Recherche clients :
+Client search :
 
-par prénom : https://dai-pw03-bader-santos.ddnsfree.com/clients?firstName=Alice
+by name : https://dai-pw03-bader-santos.ddnsfree.com/clients?firstName=Alice
 
-par nom : https://dai-pw03-bader-santos.ddnsfree.com/clients?lastName=Tanaka
+by lastname : https://dai-pw03-bader-santos.ddnsfree.com/clients?lastName=Tanaka
 
-prénom + nom : https://dai-pw03-bader-santos.ddnsfree.com/clients?firstName=Alice&lastName=Tanaka
+First + lastname : https://dai-pw03-bader-santos.ddnsfree.com/clients?firstName=Alice&lastName=Tanaka
 
 
-##### Visites d’un client :
+##### Client history by id :
 https://dai-pw03-bader-santos.ddnsfree.com/clients/1/visits
