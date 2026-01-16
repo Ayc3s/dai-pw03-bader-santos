@@ -77,12 +77,16 @@ public class BathsController {
     public void getOne(Context ctx) {
         Integer id = ctx.pathParamAsClass("id", Integer.class).get();
 
-        // Get the last known modification date of the baths
+        // Get the last known modification date of the bath
         LocalDateTime lastKnownModification =
                 ctx.headerAsClass("If-Modified-Since", LocalDateTime.class).getOrDefault(null);
 
-        // Check if the baths has been modified since the last known modification date
-        if (lastKnownModification != null && bathsCache.get(id).equals(lastKnownModification)) {
+        LocalDateTime cached = bathsCache.get(id);
+
+        // Check if the bath has been modified since the last known modification date
+        if (lastKnownModification != null
+                && cached != null
+                && cached.equals(lastKnownModification)) {
             throw new NotModifiedResponse();
         }
 
@@ -92,11 +96,11 @@ public class BathsController {
         }
 
         LocalDateTime now;
-        if (bathsCache.containsKey(bath.id())) {
+        if (cached != null) {
             // If it is already in the cache, get the last modification date
-            now = bathsCache.get(bath.id());
-            // Otherwise, set to the current date
+            now = cached;
         } else {
+            // Otherwise, set to the current date and put it in the cache
             now = LocalDateTime.now();
             bathsCache.put(bath.id(), now);
         }
@@ -111,18 +115,21 @@ public class BathsController {
         LocalDateTime lastKnownModification =
                 ctx.headerAsClass("If-Modified-Since", LocalDateTime.class).getOrDefault(null);
 
+        LocalDateTime cachedAll = bathsCache.get(RESERVED_ID_TO_IDENTIFY_ALL_BATHS);
+
         // Check if all baths have been modified since the last known modification date
         if (lastKnownModification != null
-                && bathsCache.get(RESERVED_ID_TO_IDENTIFY_ALL_BATHS).equals(lastKnownModification)) {
+                && cachedAll != null
+                && cachedAll.equals(lastKnownModification)) {
             throw new NotModifiedResponse();
         }
 
         LocalDateTime now;
-        if (bathsCache.containsKey(RESERVED_ID_TO_IDENTIFY_ALL_BATHS)) {
+        if (cachedAll != null) {
             // If it is already in the cache, get the last modification date
-            now = bathsCache.get(RESERVED_ID_TO_IDENTIFY_ALL_BATHS);
+            now = cachedAll;
         } else {
-            // Otherwise, set to the current date
+            // Otherwise, set to the current date and put it in the cache
             now = LocalDateTime.now();
             bathsCache.put(RESERVED_ID_TO_IDENTIFY_ALL_BATHS, now);
         }
@@ -136,12 +143,16 @@ public class BathsController {
     public void update(Context ctx) {
         Integer id = ctx.pathParamAsClass("id", Integer.class).get();
 
-        // Get the last known modification date of the baths
+        // Get the last known modification date of the bath
         LocalDateTime lastKnownModification =
                 ctx.headerAsClass("If-Unmodified-Since", LocalDateTime.class).getOrDefault(null);
 
-        // Check if the baths has been modified since the last known modification date
-        if (lastKnownModification != null && !bathsCache.get(id).equals(lastKnownModification)) {
+        LocalDateTime cached = bathsCache.get(id);
+
+        // Check if the bath has been modified since the last known modification date
+        if (lastKnownModification != null
+                && cached != null
+                && !cached.equals(lastKnownModification)) {
             throw new PreconditionFailedResponse();
         }
 
@@ -151,16 +162,16 @@ public class BathsController {
 
         Bath input = ctx.bodyAsClass(Bath.class);
 
-        Bath updated = new Bath(
-                id,
-                input.name(),
-                input.location(),
-                input.type(),
-                input.maintenanceDone(),
-                input.minTemperature(),
-                input.maxTemperature(),
-                input.isActive()
-        );
+        Bath updated =
+                new Bath(
+                        id,
+                        input.name(),
+                        input.location(),
+                        input.type(),
+                        input.maintenanceDone(),
+                        input.minTemperature(),
+                        input.maxTemperature(),
+                        input.isActive());
 
         validateBathType(input.type());
 
@@ -189,7 +200,11 @@ public class BathsController {
         LocalDateTime lastKnownModification =
                 ctx.headerAsClass("If-Unmodified-Since", LocalDateTime.class).getOrDefault(null);
 
-        if (lastKnownModification != null && !bathsCache.get(id).equals(lastKnownModification)) {
+        LocalDateTime cached = bathsCache.get(id);
+
+        if (lastKnownModification != null
+                && cached != null
+                && !cached.equals(lastKnownModification)) {
             throw new PreconditionFailedResponse();
         }
 
