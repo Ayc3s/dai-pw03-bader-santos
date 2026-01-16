@@ -7,6 +7,8 @@ import ch.heigvd.clients.Client;
 import ch.heigvd.clients.ClientsController;
 import ch.heigvd.clients.Visit;
 import io.javalin.Javalin;
+
+import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,10 +19,19 @@ public class Main {
 
   public static void main(String[] args) {
     Javalin app =
-        Javalin.create();
+            Javalin.create(
+                    // Add custom configuration to Javalin
+                    config -> {
+                      // This will allow us to parse LocalDateTime
+                      config.validation.register(LocalDateTime.class, LocalDateTime::parse);
+                    });
 
+    // Database
     ConcurrentMap<Integer, Client> clients = new ConcurrentHashMap<>();
     ConcurrentMap<Integer, Bath> baths = new ConcurrentHashMap<>();
+
+    // Cache for baths last modification times (per bath and for all baths)
+    ConcurrentMap<Integer, LocalDateTime> bathsCache = new ConcurrentHashMap<>();
 
     ConcurrentMap<Integer, CopyOnWriteArrayList<Visit>> visitsByClientId = new ConcurrentHashMap<>();
     ConcurrentMap<Integer, CopyOnWriteArrayList<Measurement>> measurementsByBathId = new ConcurrentHashMap<>();
@@ -31,7 +42,7 @@ public class Main {
 
     // Controllers
     ClientsController clientsController = new ClientsController(clients, baths, visitsByClientId, clientIdSeq, visitIdSeq);
-    BathsController bathsController = new BathsController(baths, measurementsByBathId, bathIdSeq);
+    BathsController bathsController = new BathsController(baths, measurementsByBathId, bathIdSeq, bathsCache);
 
     // Client management
     app.post("/clients", clientsController::create);
