@@ -1,0 +1,47 @@
+networks:
+  traefik_network:
+    name: traefik_network
+
+services:
+  traefik:
+    image: traefik:${TRAEFIK_IMAGE_VERSION}
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=traefik_network
+      - --api.dashboard=true
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+      - --entrypoints.http.http.redirections.entrypoint.to=https
+      - --entrypoints.http.http.redirections.entrypoint.scheme=https
+      - --entrypoints.http.http.redirections.entrypoint.permanent=true
+      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik.entrypoints=https
+      - traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)
+      - traefik.http.routers.traefik.tls.certresolver=letsencrypt
+      - traefik.http.routers.traefik.service=api@internal
+
+  app:
+    image: ghcr.io/ayc3s/dai-pw3-bader-santos:1.0
+    restart: unless-stopped
+    networks:
+      - traefik_network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.entrypoints=https
+      - traefik.http.routers.app.rule=Host(`${APP_HOST}`)
+      - traefik.http.routers.app.tls.certresolver=letsencrypt
+      - traefik.http.services.app.loadbalancer.server.port=8080
