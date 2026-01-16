@@ -1,6 +1,7 @@
 package ch.heigvd.baths;
 
 import io.javalin.http.*;
+import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,12 +11,21 @@ public class BathsController {
     private final ConcurrentMap<Integer, CopyOnWriteArrayList<Measurement>> measurementsByBathId;
     private final AtomicInteger bathIdSeq;
 
+    private final ConcurrentMap<Integer, LocalDateTime> bathsCache;
+
+    // This is a magic number used to store the baths' list last modification date
+    // As the ID for baths starts from 1, it is safe to reserve the value -1 for all baths
+    private final Integer RESERVED_ID_TO_IDENTIFY_ALL_BATHS = -1;
+
     public BathsController(
             ConcurrentMap<Integer, Bath> baths,
-            ConcurrentMap<Integer, CopyOnWriteArrayList<Measurement>> measurementsByBathId, AtomicInteger bathIdSeq) {
+            ConcurrentMap<Integer, CopyOnWriteArrayList<Measurement>> measurementsByBathId,
+            AtomicInteger bathIdSeq,
+            ConcurrentMap<Integer, LocalDateTime> bathsCache) {
         this.baths = baths;
         this.measurementsByBathId = measurementsByBathId;
         this.bathIdSeq = bathIdSeq;
+        this.bathsCache = bathsCache;
     }
 
     // POST /baths
@@ -30,7 +40,7 @@ public class BathsController {
                         .check(b -> b.maxTemperature() != null, "Missing maxTemperature")
                         .get();
 
-        validateBathType(input.type()); // hot, cold, ...
+        validateBathType(input.type());
 
         if (input.minTemperature() > input.maxTemperature()) {
             throw new BadRequestResponse("minTemperature must be <= maxTemperature");
@@ -51,25 +61,74 @@ public class BathsController {
 
         baths.put(id, created);
 
+        // Store the last modification date of this bath in the cache
+        LocalDateTime now = LocalDateTime.now();
+        bathsCache.put(created.id(), now);
+
+        // Invalidate the cache for the collection of all baths
+        bathsCache.remove(RESERVED_ID_TO_IDENTIFY_ALL_BATHS);
+
         ctx.status(HttpStatus.CREATED);
+        ctx.header("Last-Modified", String.valueOf(now));
         ctx.json(created);
     }
-
 
     // GET /baths/{id}
     public void getOne(Context ctx) {
         Integer id = ctx.pathParamAsClass("id", Integer.class).get();
+
+        // Get the last known modification date of the baths
+        LocalDateTime lastKnownModification =
+                ctx.headerAsClass("If-Modified-Since", LocalDateTime.class).getOrDefault(null);
+
+        // Check if the baths has been modified since the last known modification date
+        if (lastKnownModification != null && bathsCache.get(id).equals(lastKnownModification)) {
+            throw new NotModifiedResponse();
+        }
 
         Bath bath = baths.get(id);
         if (bath == null) {
             throw new NotFoundResponse();
         }
 
+        LocalDateTime now;
+        if (bathsCache.containsKey(bath.id())) {
+            // If it is already in the cache, get the last modification date
+            now = bathsCache.get(bath.id());
+            // Otherwise, set to the current date
+        } else {
+            now = LocalDateTime.now();
+            bathsCache.put(bath.id(), now);
+        }
+
+        ctx.header("Last-Modified", String.valueOf(now));
         ctx.json(bath);
     }
 
     // GET /baths
     public void getMany(Context ctx) {
+        // Get the last known modification date of all baths
+        LocalDateTime lastKnownModification =
+                ctx.headerAsClass("If-Modified-Since", LocalDateTime.class).getOrDefault(null);
+
+        // Check if all baths have been modified since the last known modification date
+        if (lastKnownModification != null
+                && bathsCache.get(RESERVED_ID_TO_IDENTIFY_ALL_BATHS).equals(lastKnownModification)) {
+            throw new NotModifiedResponse();
+        }
+
+        LocalDateTime now;
+        if (bathsCache.containsKey(RESERVED_ID_TO_IDENTIFY_ALL_BATHS)) {
+            // If it is already in the cache, get the last modification date
+            now = bathsCache.get(RESERVED_ID_TO_IDENTIFY_ALL_BATHS);
+        } else {
+            // Otherwise, set to the current date
+            now = LocalDateTime.now();
+            bathsCache.put(RESERVED_ID_TO_IDENTIFY_ALL_BATHS, now);
+        }
+
+        // Add the last modification date to the response
+        ctx.header("Last-Modified", String.valueOf(now));
         ctx.json(baths.values());
     }
 
@@ -77,7 +136,18 @@ public class BathsController {
     public void update(Context ctx) {
         Integer id = ctx.pathParamAsClass("id", Integer.class).get();
 
-        if (!baths.containsKey(id)) throw new NotFoundResponse();
+        // Get the last known modification date of the baths
+        LocalDateTime lastKnownModification =
+                ctx.headerAsClass("If-Unmodified-Since", LocalDateTime.class).getOrDefault(null);
+
+        // Check if the baths has been modified since the last known modification date
+        if (lastKnownModification != null && !bathsCache.get(id).equals(lastKnownModification)) {
+            throw new PreconditionFailedResponse();
+        }
+
+        if (!baths.containsKey(id)) {
+            throw new NotFoundResponse();
+        }
 
         Bath input = ctx.bodyAsClass(Bath.class);
 
@@ -92,16 +162,36 @@ public class BathsController {
                 input.isActive()
         );
 
-        validateBathType(input.type()); // hot, cold, ...
+        validateBathType(input.type());
+
+        if (updated.minTemperature() > updated.maxTemperature()) {
+            throw new BadRequestResponse("minTemperature must be <= maxTemperature");
+        }
 
         baths.put(id, updated);
-        ctx.status(HttpStatus.OK).json(updated);
-    }
 
+        // Store the last modification date of this bath in the cache
+        LocalDateTime now = LocalDateTime.now();
+        bathsCache.put(updated.id(), now);
+
+        // Invalidate the cache for the collection of all baths
+        bathsCache.remove(RESERVED_ID_TO_IDENTIFY_ALL_BATHS);
+
+        ctx.status(HttpStatus.OK);
+        ctx.header("Last-Modified", String.valueOf(now));
+        ctx.json(updated);
+    }
 
     // DELETE /baths/{id}
     public void delete(Context ctx) {
         Integer id = ctx.pathParamAsClass("id", Integer.class).get();
+
+        LocalDateTime lastKnownModification =
+                ctx.headerAsClass("If-Unmodified-Since", LocalDateTime.class).getOrDefault(null);
+
+        if (lastKnownModification != null && !bathsCache.get(id).equals(lastKnownModification)) {
+            throw new PreconditionFailedResponse();
+        }
 
         if (!baths.containsKey(id)) {
             throw new NotFoundResponse();
@@ -109,6 +199,12 @@ public class BathsController {
 
         baths.remove(id);
         measurementsByBathId.remove(id);
+
+        // Invalidate the cache for this bath
+        bathsCache.remove(id);
+
+        // Invalidate the cache for the collection of all baths
+        bathsCache.remove(RESERVED_ID_TO_IDENTIFY_ALL_BATHS);
 
         ctx.status(HttpStatus.NO_CONTENT);
     }
