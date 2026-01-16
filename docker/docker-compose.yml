@@ -35,7 +35,7 @@ services:
       - traefik.http.routers.traefik.service=api@internal
 
   app:
-    image: ghcr.io/ayc3s/dai-pw3-bader-santos:1.0
+    image: ghcr.io/ayc3s/dai-pw3-bader-santos:1.1
     restart: unless-stopped
     networks:
       - traefik_network

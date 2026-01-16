@@ -44,6 +44,7 @@ You can find our previous project where we explain how to deploy an image to hcr
 
 Go to : https://github.com/MauroWasTaken/dai-pw02-bader-santos
 
+You can find our package here : https://github.com/users/Ayc3s/packages/container/package/dai-pw3-bader-santos
 ## Launch the app
 
 One your are connected to the vm :
@@ -55,7 +56,7 @@ ssh ubuntu@51.103.223.246
 You can start the application if not started by :
 
 ```bash
-cd cd dai-pw03-bader-santos/docker/
+cd dai-pw03-bader-santos/docker/
 docker compose up app -d
 ```
 
@@ -231,5 +232,3 @@ data consistent.decided to focus our cache strategy why the model "validation mo
     - Remove timestamp for this bath: `cache.remove(id)`
     - Invalidate the collection cache: `cache.remove(-1)`
     - Return `204 No Content`
-
-## How to test
