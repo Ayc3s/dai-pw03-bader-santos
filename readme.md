@@ -6,6 +6,13 @@
 
 In this document, we will see the installation of the project, including the setup of the Vm and how to work with our project.
 
+
+# Overview
+
+The Onsen Management App allows to manage clients and baths for a Japanese onsen (thermal bath) business. It uses the HTTP protocol and the JSON format and it is based on a REST / CRUD pattern and manages two main domains:
+
+The clients and the Baths
+
 # API
 
 You can find the entire description of Our API here [api.md](api.md)
@@ -30,14 +37,34 @@ We worked with Dynu to get our free DNS domain.
 
 ![img.png](img/dns_record.png)
 
+
+## Image configuration
+
+You can find our previous project where we explain how to deploy an image to hcr github and various things 
+
+Go to : https://github.com/MauroWasTaken/dai-pw02-bader-santos
+
 ## Launch the app
 
-TODO : faire une image docker avant de remplir cette section
+One your are connected to the vm :
+
+```bash
+ssh ubuntu@51.103.223.246
+```
+
+You can start the application if not started by :
+
+```bash
+cd cd dai-pw03-bader-santos/docker/
+docker compose up app -d
+```
+
 
 After launching, you can acess to :
 
 Treafik : https://traefik.dai-pw03-bader-santos.ddnsfree.com/
 
+And you can play with the next section.
 
 ## Curl and testing the app
 
@@ -164,32 +191,45 @@ curl -X DELETE \
 "$BASE/baths/1"
 ```
 
-### Url access
+# Cache strategy
 
-##### Baths
+Baths represent physical installations (hot/cold/indoor/outdoor baths). They are
+typically created once and then rarely modified (mostly when a maintenance
+is done, or when operational parameters are adjusted).
 
-All baths :
-https://dai-pw03-bader-santos.ddnsfree.com/baths
+This makes baths a good candidate for caching, because:
 
-bath by id :
-https://dai-pw03-bader-santos.ddnsfree.com/baths/1
+Read operations (GET /baths, GET /baths/{id}) happen frequently.
 
-##### Clients
+Write operations (POST, PUT, DELETE) happen less often.
 
-All clients :
-https://dai-pw03-bader-santos.ddnsfree.com/clients
+We therefore implemented a caching strategy that optimizes reads while keeping
+data consistent.decided to focus our cache strategy why the model "validation model". In our app, the baths will be creater once, maybe updated, but mostly updated when we need a maintenance or we did a maintenance. So this cache strategy is very good because the baths are rarely modified and this allow us to gain performance.
 
-Client by id :
-https://dai-pw03-bader-santos.ddnsfree.com/clients/1
+## Implementation
 
-Client search :
+### Create a bath (`POST /baths`)
 
-by name : https://dai-pw03-bader-santos.ddnsfree.com/clients?firstName=Alice
+- Store a timestamp for the created bath: `cache[id] = now`
+- Invalidate the collection cache: `cache.remove(-1)`
+- Return `Last-Modified: now`
 
-by lastname : https://dai-pw03-bader-santos.ddnsfree.com/clients?lastName=Tanaka
+### Update a bath (`PUT /baths/{id}`)
 
-First + lastname : https://dai-pw03-bader-santos.ddnsfree.com/clients?firstName=Alice&lastName=Tanaka
+- Require `If-Unmodified-Since` to prevent overwriting changes:
+    - If it does not match `cache[id]` → return `412 Precondition Failed`
+- If the update is accepted:
+    - Update timestamp: `cache[id] = now`
+    - Invalidate the collection cache: `cache.remove(-1)`
+    - Return `Last-Modified: now`
 
+### Delete a bath (`DELETE /baths/{id}`)
 
-##### Client history by id :
-https://dai-pw03-bader-santos.ddnsfree.com/clients/1/visits
+- Require `If-Unmodified-Since`:
+    - If it does not match `cache[id]` → return `412 Precondition Failed`
+- If the delete is accepted:
+    - Remove timestamp for this bath: `cache.remove(id)`
+    - Invalidate the collection cache: `cache.remove(-1)`
+    - Return `204 No Content`
+
+## How to test
